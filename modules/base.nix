@@ -3,11 +3,7 @@
   pkgs,
   ...
 }: let
-  inherit
-    (lib)
-    mkOption
-    types
-    ;
+  inherit (lib) mkOption types;
 
   wrapperOpts = {config, ...}: {
     options = {
@@ -34,9 +30,7 @@
           Structured environment variables.
         '';
         default = {};
-        example = {
-          NIX_CONFIG = "allow-import-from-derivation = false";
-        };
+        example = {NIX_CONFIG = "allow-import-from-derivation = false";};
       };
 
       flags = mkOption {
@@ -88,9 +82,7 @@
           necessary files.
         '';
         default = {};
-        example = {
-          "nvim" = "custom-nvim";
-        };
+        example = {"nvim" = "custom-nvim";};
       };
     };
 
@@ -104,11 +96,15 @@
                 for file in $out/bin/*; do
                   echo "Wrapping $file"
                   wrapProgram $file ${
-                  lib.concatStringsSep " " (builtins.attrValues (builtins.mapAttrs (name: value: "--set-default ${name} ${value}") config.env))
+                  lib.concatStringsSep " " (builtins.attrValues (builtins.mapAttrs
+                    (name: value: "--set-default ${name} ${value}")
+                    config.env))
                 } ${
-                  lib.concatMapStringsSep " " (args: "--add-flags \"${args}\"") config.flags
+                  lib.concatMapStringsSep " " (args: ''--add-flags "${args}"'')
+                  config.flags
                 } ${
-                  lib.concatMapStringsSep " " (p: "--prefix PATH : ${p}/bin") config.pathAdd
+                  lib.concatMapStringsSep " " (p: "--prefix PATH : ${p}/bin")
+                  config.pathAdd
                 } ${config.extraWrapperFlags}
                 done
 
@@ -117,44 +113,39 @@
 
                   if false; then
                     exit 2
-                  ${lib.concatStringsSep "\n" (builtins.attrValues (lib.mapAttrs (name: value: ''
-                    elif [[ $exe == ${name} ]]; then
-                      newexe=${value}
-                      mv -vf $exe $newexe
-                  '')
-                  config.renames))}
+                  ${
+                  lib.concatStringsSep "\n" (builtins.attrValues (lib.mapAttrs
+                    (name: value: ''
+                      elif [[ $exe == ${name} ]]; then
+                        newexe=${value}
+                        mv -vf $exe $newexe
+                    '')
+                    config.renames))
+                }
                   else
                     newexe=$exe
                   fi
 
                   # Fix .desktop files
                   # This list of fixes might not be exhaustive
-                  for file in $out/share/applications/*; do
-                    echo "Fixing $file"
-                    sed -i "s#/nix/store/.*/bin/$exe #$out/bin/$newexe #" "$file"
-                    sed -i -E "s#Exec=$exe([[:space:]])#Exec=$out/bin/$newexe\1#g" "$file"
-                    sed -i -E "s#TryExec=$exe([[:space:]]*)#TryExec=$out/bin/$newexe\1#g" "$file"
-                  done
+                  # for file in $out/share/applications/*; do
+                  #   echo "Fixing $file"
+                  #   sed -i "s#/nix/store/.*/bin/$exe #$out/bin/$newexe #" "$file"
+                  #   sed -i -E "s#Exec=$exe([[:space:]])#Exec=$out/bin/$newexe\1#g" "$file"
+                  #   sed -i -E "s#TryExec=$exe([[:space:]]*)#TryExec=$out/bin/$newexe\1#g" "$file"
+                  # done
                 done
 
 
                 # I don't know of a better way to create a multe-output derivation for symlinkJoin
                 # So if the packages have man, just link them into $out
-                ${
-                  lib.concatMapStringsSep "\n"
-                  (p:
-                    if lib.hasAttr "man" p
-                    then "${pkgs.xorg.lndir}/bin/lndir -silent ${p.man} $out"
-                    else "#")
-                  ([config.basePackage] ++ config.extraPackages)
-                }
+                ${lib.concatMapStringsSep "\n" (p:
+                  if lib.hasAttr "man" p
+                  then "${pkgs.xorg.lndir}/bin/lndir -silent ${p.man} $out"
+                  else "#") ([config.basePackage] ++ config.extraPackages)}
               '';
             }
-            // lib.getAttrs [
-              "name"
-              "meta"
-            ]
-            config.basePackage)
+            // lib.getAttrs ["name" "meta"] config.basePackage)
           // (lib.optionalAttrs (lib.hasAttr "pname" config.basePackage) {
             inherit (config.basePackage) pname;
           })
@@ -162,9 +153,7 @@
             inherit (config.basePackage) version;
           });
       in
-        lib.recursiveUpdate result {
-          meta.outputsToInstall = ["out"];
-        };
+        lib.recursiveUpdate result {meta.outputsToInstall = ["out"];};
     };
   };
 in {
@@ -178,6 +167,5 @@ in {
     };
   };
 
-  config = {
-  };
+  config = {};
 }
